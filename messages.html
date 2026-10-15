@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messages — ReFurnish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+.msgs { display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch; padding-top: 32px; padding-bottom: 48px; }
+.list { flex: 1 1 300px; display: flex; flex-direction: column; overflow: hidden; height: min(760px, calc(100vh - 140px)); min-height: 480px; }
+.list ul { list-style: none; margin: 0; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.convo { width: 100%; display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 12px; border: 0; border-radius: 12px; cursor: pointer; font-family: var(--font); color: var(--ink); background: transparent; }
+.convo:hover { background: var(--bg); }
+.convo[aria-current="true"] { background: var(--sunken); }
+.convo .thumb { width: 48px; flex: none; }
+.convo .thumb .well { border-radius: 8px; }
+.convo .preview { font-size: 14px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.convo.unread .preview { color: var(--ink); font-weight: 600; }
+.dot { width: 10px; height: 10px; border-radius: 999px; background: var(--oak-deep); flex: none; align-self: center; }
+.thread { flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; overflow: hidden; height: min(760px, calc(100vh - 140px)); min-height: 480px; }
+.thread-head { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.item-pill { display: flex; align-items: center; gap: 12px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); text-decoration: none; }
+.item-pill .well { width: 40px; border-radius: 6px; }
+.stream { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: var(--bg); overflow-y: auto; }
+.sys { align-self: center; display: flex; gap: 8px; align-items: center; padding: 8px 14px; background: var(--oak); color: var(--oak-deep); border-radius: 999px; font-size: 13px; line-height: 18px; text-align: center; }
+.m { display: flex; flex-direction: column; gap: 4px; max-width: 70%; }
+.m.me { align-items: flex-end; align-self: flex-end; }
+.m.them { align-items: flex-start; align-self: flex-start; }
+.bubble { padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 22px; overflow-wrap: anywhere; }
+.me .bubble { background: var(--ink); color: var(--bg); border-bottom-right-radius: 4px; }
+.them .bubble { background: #fff; color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.m time { font-size: 12px; color: var(--muted); padding: 0 4px; }
+.composer { padding: 14px 16px; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: center; }
+.composer input { flex: 1; min-width: 0; }
+.typing { align-self: flex-start; font-size: 13px; color: var(--muted); }
+@media (max-width: 860px) {
+  .list, .thread { height: auto; min-height: 0; }
+  .stream { min-height: 360px; }
+  .m { max-width: 85%; }
+}
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="container msgs">
+  <section aria-label="Conversations" class="panel list">
+    <div style="padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 12px">
+      <h1 class="h-m">Messages</h1>
+      <div role="group" aria-label="Show" id="filters" style="display: flex; gap: 6px"></div>
+    </div>
+    <ul id="convos"></ul>
+  </section>
+  <section aria-label="Conversation" class="panel thread" id="thread"></section>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var threads = RF.threads();
+  threads.forEach(function (t) { t.typing = false; });
+  var want = RF.param('listing');
+  var filter = 'All';
+  var active = threads.length ? threads[0].id : null;
+
+  // Opening "Message seller" from a listing starts (or reopens) that conversation.
+  if (want) {
+    var l = RF.getListing(want);
+    var t = threads.filter(function (x) { return x.listing === want; })[0];
+    if (!t && l && !l.mine) {
+      t = { id: 't-' + Date.now().toString(36), listing: want, with: l.seller, role: 'buying', unread: false, msgs: [] };
+      threads.unshift(t); RF.saveThreads(threads);
+    }
+    if (t) active = t.id;
+  }
+  RF.init('messages');
+
+  var REPLIES = [
+    'Thanks for your message! Yes, it’s still available.',
+    'Sure, that works for me. Which day suits you?',
+    'I can send a few more photos if that helps.',
+    'Pickup is easiest in the evening after 6.'
+  ];
+
+  function find(id) { return threads.filter(function (x) { return x.id === id; })[0]; }
+  function save() { RF.saveThreads(threads); }
+
+  function renderFilters() {
+    RF.$('#filters').innerHTML = ['All', 'Buying', 'Selling'].map(function (f) {
+      return '<button type="button" class="chip chip-sm" data-filter="' + f + '" aria-pressed="' + (filter === f) + '">' + f + '</button>';
+    }).join('');
+  }
+
+  function renderList() {
+    var shown = threads.filter(function (t) { return filter === 'All' || t.role === filter.toLowerCase(); });
+    RF.$('#convos').innerHTML = shown.length ? shown.map(function (t) {
+      var l = RF.getListing(t.listing) || { name: 'Removed listing', cat: 'Sofas' };
+      var s = RF.seller(t.with) || { name: 'Member' };
+      var last = t.msgs[t.msgs.length - 1];
+      var unread = t.unread && t.id !== active;
+      return '<li><button type="button" class="convo' + (unread ? ' unread' : '') + '" data-thread="' + t.id + '" aria-current="' + (t.id === active) + '">' +
+        '<span class="thumb">' + RF.well(l) + '</span>' +
+        '<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">' +
+          '<span style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:600;font-size:15px">' + RF.esc(s.name) + '</span><span style="font-size:12px;color:var(--muted)">' + RF.esc(last ? last.time : '') + '</span></span>' +
+          '<span style="font-size:13px;line-height:18px;color:var(--muted)">' + RF.esc(l.name) + '</span>' +
+          '<span class="preview">' + RF.esc(last ? (last.me ? 'You: ' : '') + last.text : 'No messages yet') + '</span>' +
+        '</span>' + (unread ? '<span class="dot" role="img" aria-label="Unread"></span>' : '') +
+        '</button></li>';
+    }).join('') : '<li class="small muted" style="padding:12px">No conversations here yet.</li>';
+  }
+
+  function renderThread(focusInput) {
+    var t = find(active);
+    var el = RF.$('#thread');
+    if (!t) {
+      el.innerHTML = '<div class="empty" style="margin:auto"><span class="h-s">No conversation selected</span><span class="muted">Message a seller from any listing to start chatting.</span><a class="btn btn-primary" href="shop.html">Browse furniture</a></div>';
+      return;
+    }
+    var l = RF.getListing(t.listing) || { id: '', name: 'Removed listing', price: null, cat: 'Sofas' };
+    var s = RF.seller(t.with) || { name: 'Member', rating: '', verified: false };
+    var canBuy = t.role === 'buying' && l.id && !l.sold;
+    var stream = '<div class="sys">' + RF.icon('lock', 16) + 'Numbers stay hidden until you both agree to share.</div>' +
+      t.msgs.map(function (m) {
+        if (m.sys) return '<div class="sys">' + RF.esc(m.text) + '</div>';
+        return '<div class="m ' + (m.me ? 'me' : 'them') + '"><div class="bubble">' + RF.esc(m.text) + '</div><time>' + RF.esc(m.time) + '</time></div>';
+      }).join('') +
+      (t.typing ? '<div class="typing">' + RF.esc(RF.firstName(s.name)) + ' is typing…</div>' : '');
+    el.innerHTML =
+      '<div class="thread-head">' +
+        '<span aria-hidden="true" style="width:40px;height:40px;border-radius:999px;background:var(--oak-deep);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px">' + RF.esc(s.name.charAt(0)) + '</span>' +
+        '<div style="flex:1;min-width:160px;display:flex;flex-direction:column">' +
+          '<a href="profile.html?seller=' + encodeURIComponent(t.with) + '" style="font-weight:600;color:var(--ink);text-decoration:none">' + RF.esc(s.name) + '</a>' +
+          '<span style="font-size:13px;line-height:18px;color:var(--muted)">' + (s.verified ? 'Phone verified · ' : '') + '★ ' + s.rating + '</span></div>' +
+        '<div class="item-pill"><a href="product.html?id=' + encodeURIComponent(l.id) + '" style="display:flex;align-items:center;gap:12px;color:var(--ink);text-decoration:none">' + RF.well(l) +
+          '<span style="display:flex;flex-direction:column;padding-right:6px"><span class="small" style="font-weight:600">' + RF.esc(l.name) + '</span><span class="small" style="font-weight:700">' + (l.sold ? 'Sold' : RF.money(l.price)) + '</span></span></a>' +
+          (canBuy ? '<a class="btn btn-primary" href="checkout.html?id=' + encodeURIComponent(l.id) + '" style="height:40px;padding:0 14px;font-size:14px">Buy now</a>' : '') +
+        '</div></div>' +
+      '<div class="stream" id="stream" aria-live="polite">' + stream + '</div>' +
+      '<form class="composer" id="composer">' +
+        '<button type="button" id="share" aria-label="Share my phone number" title="Share my number" class="btn btn-secondary btn-icon" style="width:44px;height:44px;flex:none"' + (t.shared ? ' disabled' : '') + '>' + RF.icon('phone') + '</button>' +
+        '<label for="msg" class="sr-only">Message</label>' +
+        '<input id="msg" class="field" autocomplete="off" placeholder="Is Saturday morning okay for pickup?">' +
+        '<button type="submit" class="btn btn-primary" style="padding:0 18px">' + RF.icon('send', 18) + 'Send</button>' +
+      '</form>';
+    var st = RF.$('#stream'); st.scrollTop = st.scrollHeight;
+    if (focusInput) RF.$('#msg').focus();
+  }
+
+  function select(id) {
+    active = id;
+    var t = find(id); if (t && t.unread) { t.unread = false; save(); }
+    renderList(); renderThread();
+  }
+
+  RF.$('#filters').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-filter]'); if (!b) return;
+    filter = b.getAttribute('data-filter'); renderFilters(); renderList();
+  });
+  RF.$('#convos').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-thread]'); if (b) select(b.getAttribute('data-thread'));
+  });
+  RF.$('#thread').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = RF.$('#msg'), txt = input.value.trim();
+    if (!txt) return;
+    var t = find(active);
+    t.msgs.push({ me: true, text: txt, time: RF.now() });
+    // Move the conversation to the top.
+    threads = [t].concat(threads.filter(function (x) { return x !== t; }));
+    save(); renderList(); renderThread(true);
+    // Demo only: the other person answers after a moment.
+    var tid = t.id;
+    setTimeout(function () { var x = find(tid); if (!x) return; x.typing = true; if (active === tid) renderThread(true); }, 700);
+    setTimeout(function () {
+      var x = find(tid); if (!x) return;
+      x.typing = false;
+      x.msgs.push({ me: false, text: REPLIES[(x.msgs.length) % REPLIES.length], time: RF.now() });
+      if (active !== tid) x.unread = true;
+      save(); renderList(); if (active === tid) renderThread(true);
+    }, 2200);
+  });
+  RF.$('#thread').addEventListener('click', function (e) {
+    if (!e.target.closest('#share')) return;
+    var t = find(active);
+    t.shared = true;
+    t.msgs.push({ sys: true, text: 'You offered to share your number. It shows once they agree.' });
+    save(); renderThread();
+  });
+
+  renderFilters();
+  select(active);
+})();
+</script>
+</body>
+</html>

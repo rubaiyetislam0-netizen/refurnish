@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saved — ReFurnish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="container" style="padding-top: 48px; padding-bottom: 96px; display: flex; flex-direction: column; gap: 28px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+    <div>
+      <h1 class="h-l">Saved</h1>
+      <p style="margin: 4px 0 0" class="muted" id="count"></p>
+    </div>
+    <label class="check" style="min-height: 44px"><input type="checkbox" id="alerts">Tell me when a price drops</label>
+  </div>
+  <div id="grid" class="product-grid"></div>
+  <div id="empty" class="panel empty" style="padding: 80px 24px" hidden>
+    <svg width="96" height="72" viewBox="0 0 96 72" fill="none" stroke="#6B635A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 40V24a6 6 0 0 1 6-6h40a6 6 0 0 1 6 6v16"/><path d="M14 40a6 6 0 0 1 12 0v6h44v-6a6 6 0 0 1 12 0v14H14z"/><path d="M20 54v8M76 54v8"/><path d="M48 12c-2-3-7-3-8 1-1 3 2 5 8 9 6-4 9-6 8-9-1-4-6-4-8-1z"/></svg>
+    <span class="h-s">Save pieces you love</span>
+    <span class="muted" style="max-width: 380px">Tap the heart on any listing and it'll wait for you here. We'll tell you if the price drops.</span>
+    <a class="btn btn-primary" href="shop.html" style="margin-top: 6px">Start browsing</a>
+  </div>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  RF.init('saved');
+  var alerts = RF.$('#alerts');
+  alerts.checked = RF.store.get('priceAlerts', true);
+  alerts.addEventListener('change', function () {
+    RF.store.set('priceAlerts', alerts.checked);
+    RF.toast(alerts.checked ? 'We’ll tell you when a saved piece gets cheaper' : 'Price-drop alerts are off');
+  });
+
+  function render() {
+    var items = RF.savedIds().map(RF.getListing).filter(Boolean);
+    var n = items.length;
+    RF.$('#count').textContent = n === 0 ? 'Nothing saved yet' : n + (n === 1 ? ' piece' : ' pieces') + ' saved';
+    RF.$('#grid').innerHTML = items.map(function (l) {
+      return RF.productCard(l, {
+        showDrop: true, noVerified: true,
+        meta: function (x) {
+          if (x.sold) return x.area + ' · ' + x.cond;
+          if (x.wasPrice) return x.area + ' · ' + x.cond + ' · was ' + RF.money(x.wasPrice);
+          return x.area + ' · ' + x.cond + ' · ' + RF.ago(x.ageHours);
+        }
+      });
+    }).join('');
+    RF.$('#grid').hidden = !n;
+    RF.$('#empty').hidden = !!n;
+  }
+  document.addEventListener('rf:saved', render);
+  render();
+})();
+</script>
+</body>
+</html>

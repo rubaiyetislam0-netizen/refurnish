@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReFurnish — Pre-loved furniture in Bangladesh</title>
+<meta name="description" content="Buy and sell pre-loved furniture from verified neighbors. Chat in the app, pick up nearby, pay how you like.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+.hero { display: flex; flex-wrap: wrap; gap: 48px; align-items: center; padding-top: 96px; padding-bottom: 64px; }
+.hero-art { flex: 1 1 480px; background: var(--oak); border-radius: 16px; min-height: 440px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+.hero-art svg { width: 100%; max-width: 560px; height: auto; display: block; }
+.cat-tile { display: flex; flex-direction: column; gap: 10px; color: var(--ink); text-decoration: none; }
+.cat-tile:hover .well { background: #EBE5DC; }
+.cat-tile .well svg.glyph { width: 52%; color: #BFB2A1; }
+.section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 32px; }
+.step-ico { width: 44px; height: 44px; border-radius: 999px; background: var(--oak); color: var(--oak-deep); display: flex; align-items: center; justify-content: center; }
+.trust { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.trust > div { display: flex; gap: 14px; align-items: flex-start; }
+.trust svg { flex: none; color: var(--oak-deep); }
+.cta { background: var(--oak); border-radius: 16px; padding: 56px 48px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 24px; }
+@media (max-width: 600px) {
+  .hero { padding-top: 40px; gap: 32px; }
+  .hero-art { min-height: 280px; }
+  .cta { padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main>
+<section class="container hero">
+  <div style="flex: 1 1 440px; display: flex; flex-direction: column; gap: 20px">
+    <span class="label" style="color: var(--oak-deep)">Pre-loved furniture, Bangladesh</span>
+    <h1 class="h-xl">Give good furniture a second home.</h1>
+    <p style="margin: 0; max-width: 460px; color: var(--muted); font-size: 18px; line-height: 28px">Buy and sell pre-loved pieces from verified neighbors. Chat in the app, pick up nearby, pay how you like.</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px">
+      <a class="btn btn-primary" href="shop.html">Start browsing</a>
+      <a class="btn btn-secondary" href="sell.html">List your sofa in 2 minutes</a>
+    </div>
+  </div>
+  <div class="hero-art" role="img" aria-label="Illustration of a sunlit living room with a sofa, a floor lamp and a plant">
+    <svg viewBox="0 0 560 440" fill="none" aria-hidden="true">
+      <path d="M190 360V150a90 90 0 0 1 180 0v210z" fill="#F4E7D7"/>
+      <path d="M280 60v300M190 230h180" stroke="#E8C8A3" stroke-width="6"/>
+      <rect x="0" y="360" width="560" height="80" fill="#DDB892"/>
+      <g stroke="#6B4A2B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M150 300v-36a22 22 0 0 1 22-22h216a22 22 0 0 1 22 22v36" fill="#FAF8F5"/>
+        <path d="M120 322a20 20 0 0 1 40 0v12h240v-12a20 20 0 0 1 40 0v40H120z" fill="#FAF8F5"/>
+        <path d="M280 300v34M132 362v14M428 362v14"/>
+        <path d="M480 360V170"/>
+        <path d="M452 170l28-46 28 46z" fill="#FAF8F5"/>
+        <path d="M460 360h40"/>
+        <path d="M60 360l10-58h44l10 58" fill="#A65A33" stroke="#6B4A2B"/>
+        <path d="M92 302c0-30-22-44-34-74M92 302c2-34 26-48 40-80M92 302c-6-26-40-30-56-50"/>
+      </g>
+      <g fill="#5C6B4E">
+        <ellipse cx="56" cy="226" rx="10" ry="20" transform="rotate(-30 56 226)"/>
+        <ellipse cx="132" cy="220" rx="10" ry="20" transform="rotate(30 132 220)"/>
+        <ellipse cx="38" cy="250" rx="9" ry="18" transform="rotate(-60 38 250)"/>
+        <ellipse cx="112" cy="262" rx="8" ry="16" transform="rotate(20 112 262)"/>
+      </g>
+      <circle cx="226" cy="300" r="16" fill="#E8C8A3" stroke="#6B4A2B" stroke-width="3"/>
+      <circle cx="334" cy="300" r="16" fill="#E8C8A3" stroke="#6B4A2B" stroke-width="3"/>
+    </svg>
+  </div>
+</section>
+
+<section class="container" style="padding-bottom: 64px">
+  <div class="section-head" style="align-items: baseline">
+    <h2 class="h-m">Shop by room essentials</h2>
+    <a href="shop.html" style="font-size: 14px; font-weight: 600">All categories</a>
+  </div>
+  <div id="cats" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px"></div>
+</section>
+
+<section class="container" style="padding-bottom: 64px">
+  <div class="section-head">
+    <h2 class="h-m">Fresh near you</h2>
+    <div id="chips" role="group" aria-label="Filter by category" style="display: flex; flex-wrap: wrap; gap: 8px"></div>
+  </div>
+  <div id="fresh" class="product-grid"></div>
+  <div style="display: flex; justify-content: center; margin-top: 40px">
+    <a class="btn btn-secondary" href="shop.html">See all listings</a>
+  </div>
+</section>
+
+<section style="background: var(--raised); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line)">
+  <div class="container" style="padding-top: 64px; padding-bottom: 64px; display: flex; flex-direction: column; gap: 40px">
+    <h2 class="h-l" style="max-width: 560px">Selling takes three steps. Buying takes less.</h2>
+    <div class="steps">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="step-ico" data-icon="camera"></span>
+        <span class="h-s">Snap a few photos</span>
+        <span class="muted">Shoot near a window and step back so the whole piece fits.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="step-ico" data-icon="tag"></span>
+        <span class="h-s">Add details and a price</span>
+        <span class="muted">We suggest a fair range based on similar pieces.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="step-ico" data-icon="chat"></span>
+        <span class="h-s">Chat and hand over</span>
+        <span class="muted">Your number stays private until you both agree to share it.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container" style="padding-top: 64px; padding-bottom: 64px">
+  <div class="trust">
+    <div><span data-icon="shield" data-size="24"></span><div><div style="font-weight: 600">Phone-verified sellers</div><div class="small muted">Every seller confirms their number before listing.</div></div></div>
+    <div><span data-icon="star" data-size="24"></span><div><div style="font-weight: 600">Honest ratings</div><div class="small muted">Buyers rate sellers after every sale.</div></div></div>
+    <div><span data-icon="card" data-size="24"></span><div><div style="font-weight: 600">Pay your way</div><div class="small muted">bKash, Nagad, card, or cash on delivery.</div></div></div>
+  </div>
+</section>
+
+<section class="container" style="padding-bottom: 96px">
+  <div class="cta">
+    <div style="max-width: 560px; display: flex; flex-direction: column; gap: 8px">
+      <h2 class="h-l">That chair you never sit in?</h2>
+      <p style="margin: 0; color: var(--oak-deep); font-size: 18px; line-height: 28px">Someone nearby is looking for it. Listing is free.</p>
+    </div>
+    <a class="btn btn-primary" href="sell.html">List an item</a>
+  </div>
+</section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  RF.init('home', 'full');
+  RF.$all('[data-icon]').forEach(function (el) {
+    el.innerHTML = RF.icon(el.getAttribute('data-icon'), Number(el.getAttribute('data-size')) || 20);
+  });
+
+  RF.$('#cats').innerHTML = RF.D.CATEGORIES.map(function (c) {
+    return '<a class="cat-tile" href="shop.html?cat=' + c + '"><span class="well square">' + RF.glyph(c) + '</span><span style="font-size: 15px; font-weight: 600">' + c + '</span></a>';
+  }).join('');
+
+  var cat = 'All';
+  function renderChips() {
+    RF.$('#chips').innerHTML = ['All', 'Sofas', 'Chairs', 'Tables', 'Beds'].map(function (l) {
+      return '<button type="button" class="chip" data-chip="' + l + '" aria-pressed="' + (cat === l) + '">' +
+        '<span class="check-ico">' + RF.icon('check', 16) + '</span>' + l + '</button>';
+    }).join('');
+  }
+  function renderFresh() {
+    var area = (RF.store.get('location', {}).area);
+    var list = RF.allListings().filter(function (x) { return !x.sold && (cat === 'All' || x.cat === cat); });
+    // Nearby first, then newest.
+    list.sort(function (a, b) {
+      var na = a.area === area ? 0 : 1, nb = b.area === area ? 0 : 1;
+      return na - nb || a.ageHours - b.ageHours;
+    });
+    RF.$('#fresh').innerHTML = list.slice(0, 8).map(function (l) { return RF.productCard(l); }).join('');
+  }
+  RF.$('#chips').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-chip]');
+    if (!b) return;
+    cat = b.getAttribute('data-chip');
+    renderChips(); renderFresh();
+  });
+  document.addEventListener('rf:location', renderFresh);
+  renderChips(); renderFresh();
+})();
+</script>
+</body>
+</html>

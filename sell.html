@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sell an item — ReFurnish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+.sell { display: flex; flex-wrap: wrap; gap: 56px; align-items: flex-start; padding-top: 40px; padding-bottom: 96px; }
+.sell-main { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 32px; }
+.progress { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.progress li { display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--muted); }
+.progress .bar { display: block; height: 4px; border-radius: 999px; background: var(--line); }
+.progress li.reached { color: var(--ink); }
+.progress li.reached .bar { background: var(--oak-deep); }
+.progress li[aria-current="step"] { font-weight: 700; }
+.photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.add-photo { aspect-ratio: 4 / 5; border: 1.5px dashed var(--line-strong); border-radius: 16px; background: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font: 600 15px var(--font); color: var(--ink); padding: 12px; text-align: center; }
+.add-photo:hover, .add-photo.drag { background: var(--sunken); }
+.photo { position: relative; }
+.photo .well { border-radius: 16px; }
+.photo .cover { position: absolute; left: 8px; top: 8px; background: #fff; }
+.photo .rm { position: absolute; right: 6px; top: 6px; width: 36px; height: 36px; border-radius: 999px; border: 0; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ink); }
+.photo .mk { position: absolute; left: 8px; bottom: 8px; height: 30px; padding: 0 10px; border-radius: 999px; border: 0; background: #fff; font: 600 12px var(--font); cursor: pointer; }
+.conds { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.conds .option-card { min-height: 64px; padding: 12px 14px; font-size: 15px; }
+.conds .option-card[aria-pressed="true"] { padding: 11px 13px; }
+.dims { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.price-box { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: #fff; }
+.price-box input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: 600 18px var(--font); color: var(--ink); }
+.price-box:focus-within { outline: 2px solid var(--oak-deep); outline-offset: 2px; }
+.price-box.invalid { border-color: var(--danger); }
+.preview { flex: 1 1 300px; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 100px; }
+.footer-nav { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 24px; }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+<div id="page"></div>
+<input type="file" id="file" accept="image/*" multiple hidden>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  RF.init('sell');
+  var D = RF.D, MAX = 10;
+  var editId = RF.param('edit');
+  var existing = editId ? RF.myListings().filter(function (x) { return x.id === editId; })[0] : null;
+  var loc = RF.store.get('location', {});
+  var f = existing ? {
+    photos: (existing.photos || []).slice(), title: existing.name, cat: existing.cat, cond: existing.cond,
+    w: existing.w || '', d: existing.d || '', h: existing.h || '', desc: existing.desc || '',
+    price: existing.price ? String(existing.price) : '', area: existing.area, pickup: true, delivery: !!existing.delivery
+  } : { photos: [], title: '', cat: 'Sofas', cond: 'Like new', w: '', d: '', h: '', desc: '', price: '', area: D.AREAS.indexOf(loc.area) !== -1 ? loc.area : 'Gulshan', pickup: true, delivery: false };
+  var step = 1, done = false, errs = {};
+  var page = RF.$('#page');
+
+  function priceRange() {
+    var p = RF.allListings().filter(function (x) { return x.cat === f.cat && x.cond === f.cond && !x.mine; }).map(function (x) { return x.price; });
+    if (p.length < 2) p = RF.allListings().filter(function (x) { return x.cat === f.cat && !x.mine; }).map(function (x) { return x.price; });
+    if (!p.length) return null;
+    var lo = Math.min.apply(null, p), hi = Math.max.apply(null, p);
+    var r = function (n) { return Math.round(n / 500) * 500; };
+    return [r(lo * 0.9), r(hi * 1.05)];
+  }
+
+  function stepHtml() {
+    if (step === 1) {
+      var ph = f.photos.map(function (src, i) {
+        return '<div class="photo"><span class="well"><img src="' + src + '" alt="Photo ' + (i + 1) + '"></span>' +
+          (i === 0 ? '<span class="label tag cover">Cover</span>' : '<button type="button" class="mk" data-cover="' + i + '">Make cover</button>') +
+          '<button type="button" class="rm" data-rm="' + i + '" aria-label="Remove photo ' + (i + 1) + '">' + RF.icon('x', 16) + '</button></div>';
+      }).join('');
+      return '<section style="display:flex;flex-direction:column;gap:24px">' +
+        '<div><h1 class="h-l">' + (existing ? 'Edit photos' : 'Add photos') + '</h1><p style="margin:6px 0 0" class="muted">Shoot near a window and step back so the whole piece fits. Up to 10 photos.</p></div>' +
+        '<div class="photos">' +
+          (f.photos.length < MAX ? '<button type="button" class="add-photo" id="addPhoto">' + RF.icon('camera', 28) + 'Add photos<span style="font-weight:400;font-size:13px;color:var(--muted)">' + f.photos.length + ' of 10 · or drop them here</span></button>' : '') +
+          ph + '</div>' +
+        (errs.photos ? '<div class="error" role="alert">' + RF.icon('alert', 18) + 'Add at least one photo so buyers can see it.</div>' : '') +
+        '</section>';
+    }
+    if (step === 2) {
+      var cats = D.CATEGORIES.map(function (c) { return '<button type="button" class="chip" data-cat="' + c + '" aria-pressed="' + (f.cat === c) + '">' + c + '</button>'; }).join('');
+      var conds = D.CONDITIONS.map(function (c) {
+        return '<button type="button" class="option-card" data-cond="' + c.label + '" aria-pressed="' + (f.cond === c.label) + '"><span style="display:block;font-weight:600">' + c.label + '</span><span style="display:block;font-size:13px;line-height:18px;color:var(--muted);margin-top:2px">' + c.hint + '</span></button>';
+      }).join('');
+      return '<section style="display:flex;flex-direction:column;gap:28px">' +
+        '<div><h1 class="h-l">Describe it</h1><p style="margin:6px 0 0" class="muted">Be honest about wear. Buyers trust listings that mention it.</p></div>' +
+        '<div class="form-row"><label for="title" class="flabel">Title</label><input id="title" class="field' + (errs.title ? ' invalid' : '') + '" data-f="title" value="' + RF.esc(f.title) + '" placeholder="Linen three-seater sofa" maxlength="80">' +
+          (errs.title ? '<span class="error" role="alert">' + RF.icon('alert', 18) + 'Give your piece a title.</span>' : '') + '</div>' +
+        '<fieldset><legend class="flabel" style="margin-bottom:12px">Category</legend><div style="display:flex;flex-wrap:wrap;gap:8px">' + cats + '</div></fieldset>' +
+        '<fieldset><legend class="flabel" style="margin-bottom:12px">Condition</legend><div class="conds">' + conds + '</div></fieldset>' +
+        '<fieldset><legend class="flabel" style="margin-bottom:12px">Dimensions (cm)</legend><div class="dims">' +
+          '<div style="display:flex;flex-direction:column;gap:6px"><label for="dw" class="help">Width</label><input id="dw" class="field" data-f="w" inputmode="numeric" placeholder="210" value="' + RF.esc(f.w) + '"></div>' +
+          '<div style="display:flex;flex-direction:column;gap:6px"><label for="dd" class="help">Depth</label><input id="dd" class="field" data-f="d" inputmode="numeric" placeholder="90" value="' + RF.esc(f.d) + '"></div>' +
+          '<div style="display:flex;flex-direction:column;gap:6px"><label for="dh" class="help">Height</label><input id="dh" class="field" data-f="h" inputmode="numeric" placeholder="80" value="' + RF.esc(f.h) + '"></div>' +
+        '</div></fieldset>' +
+        '<div class="form-row"><label for="desc" class="flabel">Description</label><textarea id="desc" class="field" data-f="desc" rows="4" placeholder="Material, age, any marks, why you’re selling">' + RF.esc(f.desc) + '</textarea></div>' +
+        '</section>';
+    }
+    var range = priceRange();
+    var areas = D.AREAS.map(function (a) { return '<option' + (f.area === a ? ' selected' : '') + '>' + a + '</option>'; }).join('');
+    return '<section style="display:flex;flex-direction:column;gap:28px">' +
+      '<div><h1 class="h-l">Price and pickup</h1><p style="margin:6px 0 0" class="muted">Last step. You can change these any time.</p></div>' +
+      '<div class="form-row"><label for="price" class="flabel">Price</label>' +
+        '<div class="price-box' + (errs.price ? ' invalid' : '') + '"><span style="font-weight:600">৳</span><input id="price" data-f="price" inputmode="numeric" value="' + RF.esc(f.price) + '" placeholder="38,000"></div>' +
+        (errs.price ? '<span class="error" role="alert">' + RF.icon('alert', 18) + 'Set a price for your piece.</span>' : '') +
+        (range ? '<div class="notice" style="align-items:center">' + RF.icon('tag', 18) + '<span>Similar ' + f.cat.toLowerCase() + ' in ' + f.cond.toLowerCase() + ' condition sell for ' + RF.money(range[0]) + '–' + Number(range[1]).toLocaleString('en-US') + '.</span></div>' : '') +
+      '</div>' +
+      '<div class="form-row"><label for="area" class="flabel">Pickup area</label><select id="area" class="field" data-f="area">' + areas + '</select><span class="help">Buyers see the area only. Your exact address stays private.</span></div>' +
+      '<fieldset style="display:flex;flex-direction:column;gap:4px"><legend class="flabel" style="margin-bottom:8px">Handover</legend>' +
+        '<label class="check" style="min-height:44px"><input type="checkbox" checked disabled>Buyer picks up</label>' +
+        '<label class="check" style="min-height:44px"><input type="checkbox" id="delivery"' + (f.delivery ? ' checked' : '') + '>ReFurnish delivery (buyer pays)</label>' +
+      '</fieldset></section>';
+  }
+
+  function previewHtml() {
+    var fake = { cat: f.cat, photos: f.photos };
+    return '<span class="label muted">Buyers will see</span>' +
+      '<div class="card pcard" style="pointer-events:none"><div class="media">' + RF.well(fake) + '<span class="label tag tag-oak badge">Verified</span></div>' +
+      '<div class="body"><span class="name">' + RF.esc(f.title || 'Your item title') + '</span><span class="price">' + (f.price ? RF.money(Number(f.price.replace(/[^0-9]/g, ''))) : '৳ —') + '</span>' +
+      '<span class="meta">' + RF.esc(f.area + ' · ' + f.cond) + ' · just now</span></div></div>';
+  }
+
+  function render() {
+    if (done) {
+      page.innerHTML = '<main class="container" style="max-width:560px;padding-top:96px;padding-bottom:96px;display:flex;flex-direction:column;gap:20px;align-items:center;text-align:center">' +
+        '<span class="success-mark" aria-hidden="true">' + RF.icon('check', 30) + '</span>' +
+        '<span class="label" style="color:var(--success)">' + (existing ? 'Listing updated' : 'Listing published') + '</span>' +
+        '<h1 class="h-l">Your ' + RF.esc(f.title.toLowerCase()) + ' is live</h1>' +
+        '<p style="margin:0" class="muted">We’ll let you know when someone messages you. Most pieces get their first message within a day.</p>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><a class="btn btn-primary" href="my-listings.html">View my listings</a><a class="btn btn-secondary" href="sell.html">List another item</a></div></main>';
+      return;
+    }
+    var names = ['Photos', 'Details', 'Price and pickup'];
+    var prog = names.map(function (n, i) {
+      var idx = i + 1;
+      return '<li class="' + (idx <= step ? 'reached' : '') + '"' + (idx === step ? ' aria-current="step"' : '') + '><span class="bar"></span>' + idx + '. ' + n + '</li>';
+    }).join('');
+    page.innerHTML = '<main class="container sell"><div class="sell-main">' +
+      '<ol class="progress" aria-label="Progress">' + prog + '</ol>' +
+      stepHtml() +
+      '<div class="footer-nav">' + (step > 1 ? '<button type="button" class="btn btn-secondary" id="back">Back</button>' : '<span></span>') +
+      '<button type="button" class="btn btn-primary" id="next">' + (step === 3 ? (existing ? 'Save changes' : 'Publish listing') : 'Continue') + '</button></div>' +
+      '</div><aside class="preview" aria-label="Listing preview" id="preview">' + previewHtml() + '</aside></main>';
+  }
+
+  function addFiles(files) {
+    var list = Array.prototype.slice.call(files).filter(function (x) { return /^image\//.test(x.type); }).slice(0, MAX - f.photos.length);
+    if (!list.length) return;
+    Promise.all(list.map(function (file) { return RF.shrinkImage(file, 700); })).then(function (urls) {
+      f.photos = f.photos.concat(urls); errs.photos = false; render();
+    }).catch(function () { RF.toast('One of those photos couldn’t be read'); });
+  }
+
+  page.addEventListener('input', function (e) {
+    var k = e.target.getAttribute('data-f'); if (!k) return;
+    var v = e.target.value;
+    if (k === 'price') { v = v.replace(/[^0-9]/g, ''); v = v ? Number(v).toLocaleString('en-US') : ''; e.target.value = v; }
+    f[k] = v;
+    if (errs[k]) { errs[k] = false; e.target.classList.remove('invalid'); e.target.parentNode.classList.remove('invalid'); }
+    RF.$('#preview').innerHTML = previewHtml();
+  });
+  page.addEventListener('change', function (e) {
+    if (e.target.id === 'delivery') f.delivery = e.target.checked;
+    if (e.target.id === 'area') { f.area = e.target.value; RF.$('#preview').innerHTML = previewHtml(); }
+  });
+  page.addEventListener('click', function (e) {
+    var t = e.target;
+    if (t.closest('#addPhoto')) { RF.$('#file').click(); return; }
+    var rm = t.closest('[data-rm]'); if (rm) { f.photos.splice(Number(rm.getAttribute('data-rm')), 1); render(); return; }
+    var cv = t.closest('[data-cover]'); if (cv) { var i = Number(cv.getAttribute('data-cover')); f.photos.unshift(f.photos.splice(i, 1)[0]); render(); return; }
+    var c = t.closest('[data-cat]'); if (c) { f.cat = c.getAttribute('data-cat'); render(); return; }
+    var cd = t.closest('[data-cond]'); if (cd) { f.cond = cd.getAttribute('data-cond'); render(); return; }
+    if (t.closest('#back')) { step--; errs = {}; render(); window.scrollTo(0, 0); return; }
+    if (t.closest('#next')) {
+      if (step === 1 && !f.photos.length && !existing) { errs.photos = true; render(); return; }
+      if (step === 2 && !f.title.trim()) { errs.title = true; render(); RF.$('#title').focus(); return; }
+      if (step === 3) {
+        if (!f.price) { errs.price = true; render(); RF.$('#price').focus(); return; }
+        publish(); return;
+      }
+      step++; errs = {}; render(); window.scrollTo(0, 0);
+    }
+  });
+  page.addEventListener('dragover', function (e) { var a = e.target.closest('.photos'); if (a) { e.preventDefault(); var b = RF.$('#addPhoto'); if (b) b.classList.add('drag'); } });
+  page.addEventListener('dragleave', function () { var b = RF.$('#addPhoto'); if (b) b.classList.remove('drag'); });
+  page.addEventListener('drop', function (e) { if (e.target.closest('.photos')) { e.preventDefault(); addFiles(e.dataTransfer.files); } });
+  RF.$('#file').addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; });
+
+  function publish() {
+    var dims = [f.w, f.d, f.h].every(function (x) { return x; }) ? f.w + ' × ' + f.d + ' × ' + f.h + ' cm' : (existing && existing.dims) || '';
+    var item = Object.assign({}, existing || {}, {
+      id: existing ? existing.id : 'my-' + Date.now().toString(36),
+      name: f.title.trim(), price: Number(f.price.replace(/[^0-9]/g, '')), cat: f.cat, cond: f.cond, area: f.area,
+      desc: f.desc.trim(), dims: dims, w: f.w, d: f.d, h: f.h, delivery: f.delivery, photos: f.photos,
+      status: 'Active', ageHours: existing && existing.status === 'Active' ? existing.ageHours : 0,
+      views: existing ? existing.views || 0 : 0, chats: existing ? existing.chats || 0 : 0
+    });
+    var list = RF.myListings().filter(function (x) { return x.id !== item.id; });
+    list.unshift(item);
+    if (!RF.saveMyListings(list)) {
+      // Browser storage is full: keep the listing with just the cover photo.
+      item.photos = f.photos.slice(0, 1);
+      if (!RF.saveMyListings(list)) { RF.toast('Your browser storage is full. Remove some photos and try again.'); return; }
+      RF.toast('Saved with the cover photo only. Browser storage is limited in this demo.');
+    }
+    done = true; render(); window.scrollTo(0, 0);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

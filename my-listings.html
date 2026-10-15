@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My listings — ReFurnish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.stats > div { padding: 20px; }
+.stats .v { font-size: 28px; line-height: 36px; font-weight: 700; margin-top: 4px; }
+@media (max-width: 600px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stats > div { padding: 16px; } }
+.rows { list-style: none; margin: 0; padding: 0; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 16px 20px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .thumb { width: 64px; flex: none; }
+.row .thumb .well { border-radius: 10px; }
+.row .stat { display: inline-flex; gap: 4px; align-items: center; }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="container" style="padding-top: 48px; padding-bottom: 96px; display: flex; flex-direction: column; gap: 32px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+    <div>
+      <h1 class="h-l">My listings</h1>
+      <p style="margin: 4px 0 0" class="muted">Manage what you're selling. <a href="profile.html?seller=me" style="font-weight: 600">View my public profile</a></p>
+    </div>
+    <a class="btn btn-primary" href="sell.html" id="listBtn">List an item</a>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div role="tablist" aria-label="Listing status" class="tabs" id="tabs"></div>
+  <div id="panel" role="tabpanel"></div>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  RF.init('account');
+  RF.$('#listBtn').insertAdjacentHTML('afterbegin', RF.icon('plus', 18));
+  var tab = 'Active';
+  var MAP = { Active: 'Active', Sold: 'Sold', Drafts: 'Draft' };
+  var EMPTY = {
+    Active: ['Nothing for sale right now', 'List a piece and it will show up here.'],
+    Sold: ['No sales yet', 'Pieces you sell will show up here.'],
+    Drafts: ['No drafts', 'Listings you save before publishing land here.']
+  };
+  var TAG = { Active: 'tag-oak', Sold: 'tag-plain', Draft: 'tag-draft' };
+
+  function render() {
+    var list = RF.myListings();
+    var counts = { Active: 0, Sold: 0, Draft: 0 };
+    list.forEach(function (x) { counts[x.status] = (counts[x.status] || 0) + 1; });
+    var unread = RF.threads().filter(function (t) { return t.unread; }).length;
+    var stat = function (k, v) { return '<div class="panel"><div class="small muted">' + k + '</div><div class="v">' + v + '</div></div>'; };
+    RF.$('#stats').innerHTML = stat('Active listings', counts.Active) + stat('Unread messages', unread) + stat('Sold', counts.Sold) + stat('Your rating', '★ 4.9');
+
+    RF.$('#tabs').innerHTML = ['Active', 'Sold', 'Drafts'].map(function (l) {
+      return '<button type="button" role="tab" class="tab" data-tab="' + l + '" aria-selected="' + (tab === l) + '" tabindex="' + (tab === l ? 0 : -1) + '">' + l + ' (' + counts[MAP[l]] + ')</button>';
+    }).join('');
+
+    var shown = list.filter(function (x) { return x.status === MAP[tab]; });
+    if (!shown.length) {
+      RF.$('#panel').innerHTML = '<div class="panel empty">' +
+        '<svg width="72" height="56" viewBox="0 0 72 56" fill="none" stroke="#6B635A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="12" y="10" width="48" height="36" rx="4"/><path d="M12 22h48M36 22v24"/><path d="M18 46v6M54 46v6"/></svg>' +
+        '<span class="h-s">' + EMPTY[tab][0] + '</span><span class="muted">' + EMPTY[tab][1] + '</span></div>';
+      return;
+    }
+    RF.$('#panel').innerHTML = '<ul class="rows panel">' + shown.map(function (x) {
+      var meta = x.status === 'Sold' ? 'Sold to ' + (x.soldTo || 'a buyer') + ' · ' + (x.soldOn || 'just now')
+        : x.status === 'Draft' ? 'Draft · ' + ((x.photos && x.photos.length) || x.photoCount || 0) + ' photos added'
+        : x.area + ' · ' + x.cond + ' · listed ' + (x.ageHours ? RF.ago(x.ageHours) + ' ago' : 'just now');
+      var link = x.status === 'Draft' ? 'sell.html?edit=' + encodeURIComponent(x.id) : 'product.html?id=' + encodeURIComponent(x.id);
+      return '<li class="row">' +
+        '<a class="thumb" href="' + link + '" aria-label="' + RF.esc(x.name) + '" tabindex="-1">' + RF.well({ cat: x.cat, photos: x.photos }) + '</a>' +
+        '<div style="flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:2px"><a href="' + link + '" style="font-weight:600;color:var(--ink);text-decoration:none">' + RF.esc(x.name) + '</a><span class="small muted">' + RF.esc(meta) + '</span></div>' +
+        '<span style="flex:0 0 110px;font-size:18px;font-weight:700">' + (x.price ? RF.money(x.price) : '—') + '</span>' +
+        '<span style="flex:0 0 auto"><span class="label tag ' + TAG[x.status] + '">' + x.status + '</span></span>' +
+        '<span class="small muted" style="flex:0 0 140px;display:flex;gap:16px">' +
+          '<span class="stat">' + RF.icon('eye', 16) + (x.views || 0) + '<span class="sr-only"> views</span></span>' +
+          '<span class="stat">' + RF.icon('chat', 16) + (x.chats || 0) + '<span class="sr-only"> chats</span></span></span>' +
+        '<span style="flex:0 0 auto;display:flex;gap:8px;margin-left:auto">' +
+          (x.status === 'Sold'
+            ? '<button type="button" class="btn btn-secondary btn-sm" data-relist="' + x.id + '">Relist</button>'
+            : '<a class="btn btn-secondary btn-sm" href="sell.html?edit=' + encodeURIComponent(x.id) + '">' + (x.status === 'Draft' ? 'Finish listing' : 'Edit') + '</a>') +
+          (x.status === 'Active' ? '<button type="button" class="btn btn-secondary btn-sm" data-sold="' + x.id + '">Mark as sold</button>' : '') +
+        '</span></li>';
+    }).join('') + '</ul>';
+  }
+
+  function updateItem(id, patch) {
+    var list = RF.myListings().map(function (y) { return y.id === id ? Object.assign({}, y, patch) : y; });
+    RF.saveMyListings(list); render();
+  }
+
+  RF.$('#tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]'); if (!b) return;
+    tab = b.getAttribute('data-tab'); render(); RF.$('[data-tab="' + tab + '"]').focus();
+  });
+  RF.$('#tabs').addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    var order = ['Active', 'Sold', 'Drafts'], i = order.indexOf(tab);
+    tab = order[(i + (e.key === 'ArrowRight' ? 1 : -1) + 3) % 3]; render(); RF.$('[data-tab="' + tab + '"]').focus();
+  });
+  RF.$('#panel').addEventListener('click', function (e) {
+    var s = e.target.closest('[data-sold]');
+    if (s) { updateItem(s.getAttribute('data-sold'), { status: 'Sold', soldTo: null, soldOn: 'just now' }); RF.toast('Marked as sold. Nice one!'); return; }
+    var r = e.target.closest('[data-relist]');
+    if (r) { updateItem(r.getAttribute('data-relist'), { status: 'Active', ageHours: 0 }); RF.toast('Back on sale'); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>

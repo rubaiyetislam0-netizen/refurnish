@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop — ReFurnish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+.layout { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; padding-top: 32px; padding-bottom: 64px; }
+.filters { flex: 1 1 240px; max-width: 100%; display: flex; flex-direction: column; gap: 28px; }
+.filters legend { margin-bottom: 10px; }
+.results { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.active-chip { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--oak); color: var(--oak-deep); font-size: 14px; font-weight: 600; }
+.active-chip button { width: 28px; height: 28px; border: 0; background: transparent; color: var(--oak-deep); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.pager { display: flex; justify-content: center; gap: 6px; margin-top: 24px; flex-wrap: wrap; }
+.pager button { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: 600 14px var(--font); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.pager button[aria-current="page"] { border: 0; background: var(--ink); color: var(--bg); cursor: default; }
+.pager button:disabled { opacity: .4; cursor: not-allowed; }
+.filter-toggle { display: none; }
+@media (max-width: 860px) {
+  .filter-toggle { display: inline-flex; }
+  .filters:not(.open) { display: none; }
+  .layout { gap: 24px; }
+}
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+
+<div class="container" style="padding-top: 32px">
+  <nav aria-label="Breadcrumb" class="breadcrumb" id="crumbs"></nav>
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; margin-top: 12px">
+    <div>
+      <h1 class="h-l" id="title">Shop</h1>
+      <p style="margin: 4px 0 0" class="muted" id="count"></p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+      <button type="button" class="btn btn-secondary btn-sm filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filters">Filters</button>
+      <label for="sort" class="small muted">Sort by</label>
+      <select id="sort" class="field" style="width: auto; height: 44px; padding-right: 32px">
+        <option value="new">Newest first</option>
+        <option value="low">Price: low to high</option>
+        <option value="high">Price: high to low</option>
+        <option value="near">Nearest to me</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="container layout">
+  <aside class="filters" id="filters" aria-label="Filters">
+    <fieldset style="display: flex; flex-direction: column; gap: 4px">
+      <legend class="label muted">Category</legend>
+      <div id="catChecks"></div>
+    </fieldset>
+    <fieldset>
+      <legend class="label muted">Price (৳)</legend>
+      <div style="display: flex; gap: 8px; align-items: center">
+        <label for="pmin" class="sr-only">Minimum price</label>
+        <input id="pmin" class="field" inputmode="numeric" placeholder="Min" style="height: 44px">
+        <span aria-hidden="true" class="muted">–</span>
+        <label for="pmax" class="sr-only">Maximum price</label>
+        <input id="pmax" class="field" inputmode="numeric" placeholder="Max" style="height: 44px">
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend class="label muted">Condition</legend>
+      <div id="condChips" style="display: flex; flex-wrap: wrap; gap: 8px"></div>
+    </fieldset>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <label for="area" class="label muted">Area</label>
+      <select id="area" class="field" style="height: 44px"></select>
+    </div>
+    <fieldset style="display: flex; flex-direction: column; gap: 4px">
+      <legend class="label muted">Handover</legend>
+      <label class="check"><input type="checkbox" id="fDelivery">Seller delivers</label>
+      <label class="check"><input type="checkbox" id="fVerified">Verified sellers only</label>
+      <label class="check"><input type="checkbox" id="fSold">Include sold items</label>
+    </fieldset>
+    <button type="button" class="btn btn-secondary btn-block" id="clear">Clear all filters</button>
+  </aside>
+
+  <main class="results">
+    <div id="active" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"></div>
+    <div id="grid" class="product-grid tight"></div>
+    <div id="empty" class="empty" hidden>
+      <svg width="72" height="56" viewBox="0 0 72 56" fill="none" stroke="#6B635A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 30V20a6 6 0 0 1 6-6h40a6 6 0 0 1 6 6v10"/><path d="M6 30h60v12H6z"/><path d="M12 42v6M60 42v6"/></svg>
+      <span class="h-s" id="emptyTitle">Nothing matches these filters</span>
+      <span class="muted">Try another condition, or widen the price range.</span>
+    </div>
+    <nav class="pager" aria-label="Pages" id="pager"></nav>
+  </main>
+</div>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  RF.init('shop', 'compact');
+  var D = RF.D, PER_PAGE = 9;
+  var q = (RF.param('q') || '').trim();
+  var initialCat = RF.param('cat');
+  var state = {
+    cats: initialCat && D.CATEGORIES.indexOf(initialCat) !== -1 ? [initialCat] : [],
+    conds: [], min: '', max: '', area: '', delivery: false, verified: false, sold: false,
+    sort: 'new', page: 1
+  };
+
+  // Build static filter controls.
+  RF.$('#catChecks').innerHTML = D.CATEGORIES.map(function (c) {
+    return '<label class="check"><input type="checkbox" value="' + c + '"' + (state.cats.indexOf(c) !== -1 ? ' checked' : '') + '>' + c + '</label>';
+  }).join('');
+  RF.$('#area').innerHTML = '<option value="">All of Dhaka</option>' + D.AREAS.map(function (a) { return '<option>' + a + '</option>'; }).join('');
+
+  function renderCondChips() {
+    RF.$('#condChips').innerHTML = D.CONDITIONS.map(function (c) {
+      var on = state.conds.indexOf(c.label) !== -1;
+      return '<button type="button" class="chip chip-md" data-cond="' + c.label + '" aria-pressed="' + on + '"><span class="check-ico">' + RF.icon('check', 16) + '</span>' + c.label + '</button>';
+    }).join('');
+  }
+
+  function num(v) { var n = parseInt(String(v).replace(/[^0-9]/g, ''), 10); return isNaN(n) ? null : n; }
+
+  function filtered() {
+    var min = num(state.min), max = num(state.max), qq = q.toLowerCase();
+    var here = RF.store.get('location', {}).area;
+    var list = RF.allListings().filter(function (x) {
+      if (!state.sold && x.sold) return false;
+      if (state.cats.length && state.cats.indexOf(x.cat) === -1) return false;
+      if (state.conds.length && state.conds.indexOf(x.cond) === -1) return false;
+      if (min != null && x.price < min) return false;
+      if (max != null && x.price > max) return false;
+      if (state.area && x.area !== state.area) return false;
+      if (state.delivery && !x.delivery) return false;
+      if (state.verified && !x.verified) return false;
+      if (qq && (x.name + ' ' + x.cat + ' ' + (x.sub || '') + ' ' + x.area + ' ' + (x.material || '')).toLowerCase().indexOf(qq) === -1) return false;
+      return true;
+    });
+    var by = {
+      'new': function (a, b) { return a.ageHours - b.ageHours; },
+      low: function (a, b) { return a.price - b.price; },
+      high: function (a, b) { return b.price - a.price; },
+      near: function (a, b) { return (a.area === here ? 0 : 1) - (b.area === here ? 0 : 1) || a.ageHours - b.ageHours; }
+    };
+    return list.sort(by[state.sort]);
+  }
+
+  function chip(label, key, val) {
+    return '<span class="active-chip">' + RF.esc(label) + '<button type="button" data-remove="' + key + '" data-val="' + RF.esc(val || '') + '" aria-label="Remove ' + RF.esc(label) + ' filter">' + RF.icon('x', 14) + '</button></span>';
+  }
+
+  function render() {
+    var single = state.cats.length === 1 ? state.cats[0] : null;
+    var title = q ? 'Results for “' + q + '”' : (single || 'All furniture');
+    RF.$('#title').textContent = title;
+    document.title = title + ' — ReFurnish';
+    RF.$('#crumbs').innerHTML = '<a href="index.html">Home</a><span aria-hidden="true">/</span>' +
+      (single || q ? '<a href="shop.html">Shop</a><span aria-hidden="true">/</span><span aria-current="page">' + RF.esc(single || 'Search') + '</span>' : '<span aria-current="page">Shop</span>');
+
+    var list = filtered();
+    var city = RF.store.get('location', {}).city || 'Dhaka';
+    RF.$('#count').textContent = list.length + (list.length === 1 ? ' listing' : ' listings') + ' near ' + city;
+
+    var chips = [];
+    if (q) chips.push(chip('“' + q + '”', 'q'));
+    state.cats.forEach(function (c) { chips.push(chip(c, 'cat', c)); });
+    state.conds.forEach(function (c) { chips.push(chip(c, 'cond', c)); });
+    if (state.min || state.max) chips.push(chip('৳ ' + (state.min || '0') + ' – ' + (state.max || 'any'), 'price'));
+    if (state.area) chips.push(chip(state.area, 'area'));
+    if (state.delivery) chips.push(chip('Seller delivers', 'delivery'));
+    if (state.verified) chips.push(chip('Verified only', 'verified'));
+    if (state.sold) chips.push(chip('Including sold', 'sold'));
+    RF.$('#active').innerHTML = chips.length ? '<span class="small muted">Showing:</span>' + chips.join('') : '';
+
+    var pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
+    if (state.page > pages) state.page = pages;
+    var slice = list.slice((state.page - 1) * PER_PAGE, state.page * PER_PAGE);
+    RF.$('#grid').innerHTML = slice.map(function (l) { return RF.productCard(l); }).join('');
+    RF.$('#grid').hidden = !slice.length;
+    RF.$('#empty').hidden = !!slice.length;
+    RF.$('#emptyTitle').textContent = q ? 'Nothing matches “' + q + '”' : 'Nothing matches these filters';
+
+    var pager = '';
+    if (pages > 1) {
+      pager += '<button type="button" data-page="' + (state.page - 1) + '" aria-label="Previous page"' + (state.page === 1 ? ' disabled' : '') + '>' + RF.icon('left') + '</button>';
+      for (var i = 1; i <= pages; i++) pager += '<button type="button" data-page="' + i + '"' + (i === state.page ? ' aria-current="page"' : '') + '>' + i + '</button>';
+      pager += '<button type="button" data-page="' + (state.page + 1) + '" aria-label="Next page"' + (state.page === pages ? ' disabled' : '') + '>' + RF.icon('right') + '</button>';
+    }
+    RF.$('#pager').innerHTML = pager;
+    renderCondChips();
+  }
+
+  function syncControls() {
+    RF.$all('#catChecks input').forEach(function (i) { i.checked = state.cats.indexOf(i.value) !== -1; });
+    RF.$('#pmin').value = state.min; RF.$('#pmax').value = state.max;
+    RF.$('#area').value = state.area;
+    RF.$('#fDelivery').checked = state.delivery;
+    RF.$('#fVerified').checked = state.verified;
+    RF.$('#fSold').checked = state.sold;
+  }
+  function update(patch) { Object.assign(state, patch, { page: 1 }); render(); }
+
+  RF.$('#catChecks').addEventListener('change', function () {
+    update({ cats: RF.$all('#catChecks input:checked').map(function (i) { return i.value; }) });
+  });
+  RF.$('#condChips').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-cond]'); if (!b) return;
+    var c = b.getAttribute('data-cond'), list = state.conds.slice(), i = list.indexOf(c);
+    if (i === -1) list.push(c); else list.splice(i, 1);
+    update({ conds: list });
+  });
+  var priceTimer;
+  ['pmin', 'pmax'].forEach(function (id) {
+    RF.$('#' + id).addEventListener('input', function () {
+      clearTimeout(priceTimer);
+      priceTimer = setTimeout(function () { update({ min: RF.$('#pmin').value.trim(), max: RF.$('#pmax').value.trim() }); }, 300);
+    });
+  });
+  RF.$('#area').addEventListener('change', function () { update({ area: RF.$('#area').value }); });
+  RF.$('#fDelivery').addEventListener('change', function (e) { update({ delivery: e.target.checked }); });
+  RF.$('#fVerified').addEventListener('change', function (e) { update({ verified: e.target.checked }); });
+  RF.$('#fSold').addEventListener('change', function (e) { update({ sold: e.target.checked }); });
+  RF.$('#sort').addEventListener('change', function (e) { update({ sort: e.target.value }); });
+  RF.$('#clear').addEventListener('click', function () {
+    q = ''; history.replaceState(null, '', 'shop.html');
+    var s = RF.$('#site-q'); if (s) s.value = '';
+    update({ cats: [], conds: [], min: '', max: '', area: '', delivery: false, verified: false, sold: false });
+    syncControls();
+  });
+  RF.$('#active').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-remove]'); if (!b) return;
+    var k = b.getAttribute('data-remove'), v = b.getAttribute('data-val');
+    if (k === 'q') { q = ''; history.replaceState(null, '', 'shop.html'); var s = RF.$('#site-q'); if (s) s.value = ''; update({}); }
+    if (k === 'cat') update({ cats: state.cats.filter(function (c) { return c !== v; }) });
+    if (k === 'cond') update({ conds: state.conds.filter(function (c) { return c !== v; }) });
+    if (k === 'price') update({ min: '', max: '' });
+    if (k === 'area') update({ area: '' });
+    if (k === 'delivery') update({ delivery: false });
+    if (k === 'verified') update({ verified: false });
+    if (k === 'sold') update({ sold: false });
+    syncControls();
+  });
+  RF.$('#pager').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-page]'); if (!b || b.disabled) return;
+    state.page = Number(b.getAttribute('data-page'));
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  RF.$('#filterToggle').addEventListener('click', function () {
+    var f = RF.$('#filters'), open = !f.classList.contains('open');
+    f.classList.toggle('open', open);
+    this.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('rf:location', render);
+
+  render();
+})();
+</script>
+</body>
+</html>

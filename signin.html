@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — ReFurnish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+body { display: flex; flex-direction: column; }
+.seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--sunken); border-radius: 12px; }
+.seg button { height: 44px; border: 0; border-radius: 9px; cursor: pointer; font: 600 14px var(--font); background: transparent; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(31,27,23,.08); }
+.divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 14px; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+</style>
+</head>
+<body>
+<header class="container" style="width: 100%; padding-top: 24px; padding-bottom: 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap">
+  <a href="index.html" class="logo" aria-label="ReFurnish home"><span class="arch" aria-hidden="true"></span><span><span class="re">Re</span>Furnish</span></a>
+  <span class="small muted">New here? <a href="signup.html" style="font-weight: 600">Create account</a></span>
+</header>
+
+<main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px 16px 96px">
+  <div class="panel" style="width: 100%; max-width: 440px; padding: 40px 32px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 6px; text-align: center">
+      <h1 class="h-l">Welcome back</h1>
+      <p style="margin: 0" class="muted">Sign in to message sellers and manage your listings.</p>
+    </div>
+    <div role="group" aria-label="Sign in with" class="seg">
+      <button type="button" data-mode="phone" aria-pressed="true">Phone</button>
+      <button type="button" data-mode="email" aria-pressed="false">Email</button>
+    </div>
+    <form id="form" novalidate style="display: flex; flex-direction: column; gap: 20px">
+      <div class="form-row" id="phoneRow">
+        <label for="phone" class="flabel">Mobile number</label>
+        <div class="phone-row"><span class="phone-prefix">+880</span><input id="phone" class="field" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="1712 345678"></div>
+      </div>
+      <div class="form-row" id="emailRow" hidden>
+        <label for="email" class="flabel">Email</label>
+        <input id="email" class="field" type="email" autocomplete="email" placeholder="nadia@example.com">
+      </div>
+      <div class="form-row">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <label for="pw" class="flabel">Password</label>
+          <a href="#" id="forgot" style="font-size: 14px; line-height: 20px; font-weight: 600">Forgot password?</a>
+        </div>
+        <input id="pw" class="field" type="password" autocomplete="current-password" placeholder="Your password">
+      </div>
+      <label class="check small muted" style="min-height: 44px"><input type="checkbox" checked>Keep me signed in</label>
+      <div class="error" role="alert" id="err" hidden></div>
+      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+    </form>
+    <div class="divider">or</div>
+    <button type="button" class="btn btn-secondary btn-block" id="google" style="background: #fff">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h6a5.1 5.1 0 0 1-2.2 3.3v2.8h3.6c2.1-1.9 3.2-4.8 3.2-7.9z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.4-2.7l-3.6-2.8c-1 .7-2.3 1.1-3.8 1.1-2.9 0-5.4-2-6.3-4.6H2v2.9A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.7 14c-.2-.7-.4-1.3-.4-2s.1-1.4.4-2V7.1H2a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2 7.1L5.7 10c.9-2.6 3.4-4.6 6.3-4.6z"/></svg>
+      Continue with Google</button>
+  </div>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var mode = 'phone';
+  RF.$all('[data-mode]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      mode = b.getAttribute('data-mode');
+      RF.$all('[data-mode]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      RF.$('#phoneRow').hidden = mode !== 'phone';
+      RF.$('#emailRow').hidden = mode !== 'email';
+      RF.$('#err').hidden = true;
+    });
+  });
+  function fail(msg, el) {
+    var e = RF.$('#err'); e.innerHTML = RF.icon('alert', 18) + RF.esc(msg); e.hidden = false;
+    if (el) { el.classList.add('invalid'); el.focus(); }
+  }
+  RF.$all('input').forEach(function (i) { i.addEventListener('input', function () { i.classList.remove('invalid'); RF.$('#err').hidden = true; }); });
+  function done(u) {
+    RF.signIn(u);
+    var next = RF.param('next');
+    location.href = next && /^[a-z-]+\.html(\?.*)?$/.test(next) ? next : 'index.html';
+  }
+  RF.$('#form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var account = RF.store.get('account', null);
+    var phone = RF.$('#phone').value.replace(/\D/g, ''), email = RF.$('#email').value.trim(), pw = RF.$('#pw').value;
+    if (mode === 'phone' && phone.length < 10) return fail('Enter your 10-digit mobile number.', RF.$('#phone'));
+    if (mode === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('Enter a valid email address.', RF.$('#email'));
+    if (!pw) return fail('Enter your password.', RF.$('#pw'));
+    // Demo sign-in: no server checks the password yet.
+    done({ name: (account && account.name) || 'ReFurnish member', phone: mode === 'phone' ? RF.$('#phone').value.trim() : (account && account.phone), email: mode === 'email' ? email : null });
+  });
+  RF.$('#google').addEventListener('click', function () { done({ name: 'Google user', email: 'you@gmail.com' }); });
+  RF.$('#forgot').addEventListener('click', function (e) { e.preventDefault(); RF.toast('We’ll text you a reset code once accounts are live.'); });
+})();
+</script>
+</body>
+</html>

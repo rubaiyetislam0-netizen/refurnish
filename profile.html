@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seller — ReFurnish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+.hero-band { background: var(--oak); }
+.hero-band .inner { padding-top: 56px; padding-bottom: 56px; display: flex; flex-wrap: wrap; gap: 32px; align-items: center; }
+.big-avatar { width: 112px; height: 112px; border-radius: 999px; background: var(--oak-deep); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 52px; flex: none; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 15px; color: var(--oak-deep); }
+.reviews { display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start; }
+.reviews dl { margin: 16px 0 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.reviews dl > div { display: flex; justify-content: space-between; }
+.reviews dd { margin: 0; font-weight: 600; }
+.reviews ul { flex: 999 1 520px; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.reviews li { padding: 20px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.stars { color: var(--oak-deep); letter-spacing: 1px; }
+@media (max-width: 600px) { .big-avatar { width: 80px; height: 80px; font-size: 36px; } }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+<div id="page"></div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var id = RF.param('seller') || 'nadia';
+  RF.init(id === 'me' ? 'account' : 'shop');
+  var s = RF.seller(id);
+  var page = RF.$('#page');
+  if (!s) {
+    page.innerHTML = '<main class="container empty" style="padding-top:96px;padding-bottom:96px"><h1 class="h-l">Seller not found</h1><a class="btn btn-primary" href="shop.html">Browse furniture</a></main>';
+    return;
+  }
+  document.title = s.name + ' — ReFurnish';
+  var me = id === 'me';
+  var listings = RF.allListings().filter(function (x) { return x.seller === id && !x.sold; });
+  var reviews = (RF.D.REVIEWS[id] || RF.D.GENERIC_REVIEWS).map(function (r) {
+    return Object.assign({}, r, { stars: '★★★★★'.slice(0, r.n) + '☆☆☆☆☆'.slice(0, 5 - r.n) });
+  });
+  var tab = 'Listings';
+  var first = RF.firstName(s.name);
+  var msgHref = listings.length ? 'messages.html?listing=' + encodeURIComponent(listings[0].id) : 'messages.html';
+
+  page.innerHTML =
+    '<section class="hero-band"><div class="container inner">' +
+      '<span class="big-avatar" aria-hidden="true">' + RF.esc(s.name.charAt(0)) + '</span>' +
+      '<div style="flex:1 1 360px;display:flex;flex-direction:column;gap:10px">' +
+        (s.verified ? '<div><span class="label tag" style="background:var(--bg);color:var(--oak-deep);display:inline-flex;gap:6px;align-items:center">' + RF.icon('check', 14) + 'Phone verified</span></div>' : '') +
+        '<h1 class="h-l">' + RF.esc(s.name) + '</h1>' +
+        '<div class="facts"><span>★ ' + s.rating + ' · ' + s.reviews + ' reviews</span><span>' + s.sold + ' pieces sold</span><span>' + RF.esc(s.area) + ', Dhaka</span><span>Member since ' + RF.esc(s.since) + '</span><span>' + RF.esc(s.replies) + '</span></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+        (me ? '<a class="btn btn-primary" href="my-listings.html">Manage listings</a>'
+            : '<a class="btn btn-primary" href="' + msgHref + '">Message ' + RF.esc(first) + '</a>' +
+              '<button type="button" class="btn btn-secondary btn-icon" id="report" aria-label="Report this seller">' + RF.icon('flag', 18) + '</button>') +
+      '</div></div></section>' +
+    '<main class="container" style="padding-top:32px;padding-bottom:96px;display:flex;flex-direction:column;gap:28px">' +
+      '<div role="tablist" aria-label="Profile sections" class="tabs" id="tabs"></div>' +
+      '<div id="panel" role="tabpanel"></div></main>';
+
+  function render() {
+    RF.$('#tabs').innerHTML = [['Listings', 'Listings (' + listings.length + ')'], ['Reviews', 'Reviews (' + s.reviews + ')']].map(function (t) {
+      return '<button type="button" role="tab" class="tab" data-tab="' + t[0] + '" aria-selected="' + (tab === t[0]) + '" tabindex="' + (tab === t[0] ? 0 : -1) + '">' + t[1] + '</button>';
+    }).join('');
+    if (tab === 'Listings') {
+      RF.$('#panel').innerHTML = listings.length
+        ? '<div class="product-grid">' + listings.map(function (l) {
+            return RF.productCard(l, { noVerified: true, noHeart: me, meta: function (x) { return x.cond + ' · ' + RF.ago(x.ageHours); } });
+          }).join('') + '</div>'
+        : '<div class="panel empty"><span class="h-s">Nothing for sale right now</span><span class="muted">' + (me ? 'List a piece and it will show up here.' : 'Check back soon.') + '</span>' + (me ? '<a class="btn btn-primary" href="sell.html">List an item</a>' : '') + '</div>';
+      return;
+    }
+    RF.$('#panel').innerHTML = '<div class="reviews">' +
+      '<div style="flex:1 1 240px;display:flex;flex-direction:column;gap:6px">' +
+        '<span style="font-size:56px;line-height:60px;font-weight:700">' + s.rating + '</span>' +
+        '<span class="stars" style="font-size:20px;letter-spacing:2px" role="img" aria-label="' + Math.round(s.rating) + ' out of 5 stars">' + '★★★★★'.slice(0, Math.round(s.rating)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(s.rating)) + '</span>' +
+        '<span class="muted">From ' + s.reviews + ' buyers</span>' +
+        '<dl><div><dt class="muted">Item as described</dt><dd>' + Math.min(5, s.rating + 0.1).toFixed(1) + '</dd></div><div><dt class="muted">Communication</dt><dd>' + s.rating.toFixed(1) + '</dd></div><div><dt class="muted">Handover</dt><dd>' + Math.max(0, s.rating - 0.1).toFixed(1) + '</dd></div></dl>' +
+      '</div><ul>' + reviews.map(function (r) {
+        return '<li><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><span style="font-weight:600">' + RF.esc(r.who) + ' <span class="muted" style="font-weight:400">· bought ' + RF.esc(r.item) + '</span></span><span class="small muted">' + RF.esc(r.when) + '</span></div>' +
+          '<span class="stars" role="img" aria-label="' + r.n + ' out of 5 stars">' + r.stars + '</span><p style="margin:0;max-width:68ch">' + RF.esc(r.text) + '</p></li>';
+      }).join('') + '</ul></div>';
+  }
+
+  RF.$('#tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]'); if (!b) return;
+    tab = b.getAttribute('data-tab'); render(); RF.$('[data-tab="' + tab + '"]').focus();
+  });
+  RF.$('#tabs').addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    tab = tab === 'Listings' ? 'Reviews' : 'Listings'; render(); RF.$('[data-tab="' + tab + '"]').focus();
+  });
+  var rep = RF.$('#report');
+  if (rep) rep.addEventListener('click', function () { RF.toast('Thanks. Our team will look into this seller.'); rep.disabled = true; });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout — ReFurnish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+.co { display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start; padding-top: 40px; padding-bottom: 96px; }
+.co-main { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 40px; }
+.co-main section { display: flex; flex-direction: column; gap: 14px; }
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.summary { flex: 1 1 340px; background: var(--raised); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; position: sticky; top: 24px; }
+.summary dl { margin: 0; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 15px; }
+.summary dl > div { display: flex; justify-content: space-between; }
+.summary dt { color: var(--muted); }
+.summary dd { margin: 0; }
+</style>
+</head>
+<body>
+<header style="border-bottom: 1px solid var(--line)">
+  <div class="container" style="padding-top: 18px; padding-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap">
+    <a href="index.html" class="logo" aria-label="ReFurnish home"><span class="arch" aria-hidden="true"></span><span><span class="re">Re</span>Furnish</span></a>
+    <span class="small muted" style="display: inline-flex; align-items: center; gap: 8px" id="secure"></span>
+  </div>
+</header>
+
+<div id="page"></div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  RF.$('#secure').innerHTML = RF.icon('lock', 18) + 'Secure checkout';
+  var id = RF.param('id') || 'linen-sofa';
+  var l = RF.getListing(id);
+  var page = RF.$('#page');
+  if (!l || l.sold || l.mine) {
+    page.innerHTML = '<main class="container empty" style="padding-top:96px;padding-bottom:96px">' +
+      '<h1 class="h-l">' + (l && l.mine ? 'This is your own listing' : 'This piece isn’t available') + '</h1>' +
+      '<p class="muted" style="margin:0">' + (l && l.mine ? 'You can’t buy something you’re selling.' : 'It may have sold already.') + '</p>' +
+      '<a class="btn btn-primary" href="shop.html">Keep browsing</a></main>';
+    return;
+  }
+  var s = RF.seller(l.seller);
+  var first = RF.firstName(s.name);
+  var DELIVERY = 800;
+  var state = { handover: 'pickup', pay: 'bKash', placed: false };
+  var PAYS = [
+    { id: 'bKash', hint: 'Pay from your bKash wallet' },
+    { id: 'Nagad', hint: 'Pay from your Nagad wallet' },
+    { id: 'Card', hint: 'Visa, Mastercard, Amex' },
+    { id: 'Cash on delivery', hint: 'Pay the seller at handover' }
+  ];
+  var shortName = { Sofas: 'sofa', Chairs: 'chair', Tables: 'table', Beds: 'bed', Storage: 'piece', Lighting: 'lamp' }[l.cat] || 'piece';
+  var areaOpts = RF.D.AREAS.map(function (a) { return '<option>' + a + '</option>'; }).join('');
+  var days = [];
+  for (var i = 2; i <= 5; i++) {
+    var d = new Date(); d.setDate(d.getDate() + i);
+    days.push(d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }));
+  }
+
+  function render() {
+    if (state.placed) {
+      page.innerHTML = '<main class="container" style="max-width:560px;padding-top:96px;padding-bottom:96px;display:flex;flex-direction:column;gap:24px;align-items:center;text-align:center">' +
+        '<span class="success-mark" aria-hidden="true">' + RF.icon('check', 30) + '</span>' +
+        '<span class="label" style="color:var(--success)">' + (state.pay === 'Cash on delivery' ? 'Order placed' : 'Payment confirmed') + '</span>' +
+        '<h1 class="h-l">The ' + RF.esc(shortName) + ' is yours</h1>' +
+        '<p style="margin:0" class="muted">' + RF.esc(first) + ' has been told. Agree a time in Messages — ' +
+          (state.pay === 'Cash on delivery' ? 'you’ll pay at handover.' : 'we’ll release the payment once you confirm you’ve got it.') + '</p>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">' +
+          '<a class="btn btn-primary" href="messages.html?listing=' + encodeURIComponent(l.id) + '">Message ' + RF.esc(first) + '</a>' +
+          '<a class="btn btn-secondary" href="index.html">Keep browsing</a></div></main>';
+      return;
+    }
+    var del = state.handover === 'delivery';
+    var opt = function (on, attrs, inner) {
+      return '<button type="button" role="radio" class="option-card" aria-checked="' + on + '" ' + attrs + '>' + inner + '</button>';
+    };
+    var handover = opt(!del, 'data-handover="pickup"',
+        '<span style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:600">Pick up</span><span style="font-weight:700">Free</span></span>' +
+        '<span class="small muted" style="display:block;margin-top:4px">From ' + RF.esc(l.area) + ', at a time you agree</span>') +
+      opt(del, 'data-handover="delivery"' + (l.delivery ? '' : ' disabled'),
+        '<span style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:600">Delivery</span><span style="font-weight:700">' + RF.money(DELIVERY) + '</span></span>' +
+        '<span class="small muted" style="display:block;margin-top:4px">' + (l.delivery ? 'To your door within Dhaka, 2–3 days' : 'Not offered for this piece') + '</span>');
+    var pays = PAYS.map(function (p) {
+      return opt(state.pay === p.id, 'data-pay="' + p.id + '"', '<span style="display:block;font-weight:600">' + p.id + '</span><span class="small muted" style="display:block;margin-top:4px">' + p.hint + '</span>');
+    }).join('');
+
+    page.innerHTML = '<main class="container co">' +
+      '<div class="co-main">' +
+        '<div><a href="product.html?id=' + encodeURIComponent(l.id) + '" style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;min-height:44px">' + RF.icon('left', 18) + 'Back to listing</a>' +
+        '<h1 class="h-l" style="margin-top:4px">Checkout</h1></div>' +
+        '<section><h2 class="h-s">1. How will you get it?</h2>' +
+          '<div role="radiogroup" aria-label="Handover" class="opts" id="handover">' + handover + '</div>' +
+          (del ? '<div class="opts" style="padding-top:8px;gap:16px">' +
+            '<div class="form-row" style="grid-column:1/-1"><label for="addr" class="flabel">Delivery address</label><input id="addr" class="field" autocomplete="street-address" placeholder="House 12, Road 5, Dhanmondi"><span class="error" id="addrErr" role="alert" hidden>' + RF.icon('alert', 18) + 'Add an address so we know where to deliver.</span></div>' +
+            '<div class="form-row"><label for="area" class="flabel">Area</label><select id="area" class="field">' + areaOpts + '</select></div>' +
+            '<div class="form-row"><label for="when" class="flabel">Preferred day</label><select id="when" class="field">' + days.map(function (d) { return '<option>' + d + '</option>'; }).join('') + '</select></div>' +
+          '</div>' : '') +
+        '</section>' +
+        '<section><h2 class="h-s">2. How will you pay?</h2>' +
+          '<div role="radiogroup" aria-label="Payment method" class="opts" id="pays">' + pays + '</div>' +
+          '<div class="notice">' + RF.icon('shield') + '<span>' +
+            (state.pay === 'Cash on delivery' ? 'You pay ' + RF.esc(first) + ' in person when you get the ' + RF.esc(shortName) + '. Check it before you hand over cash.' :
+             'We hold your payment until you confirm you’ve received the ' + RF.esc(shortName) + '. If it isn’t as described, you get your money back.') +
+          '</span></div>' +
+        '</section>' +
+      '</div>' +
+      '<aside aria-label="Order summary" class="summary">' +
+        '<span class="label muted">Your order</span>' +
+        '<div style="display:flex;gap:14px"><span style="width:80px;flex:none">' + RF.well(l) + '</span>' +
+          '<div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">' + RF.esc(l.name) + '</span>' +
+          '<span class="small muted">' + RF.esc(l.area + ' · ' + l.cond) + '</span><span class="small muted">Sold by ' + RF.esc(first + ' ' + s.name.split(' ').slice(-1)[0].charAt(0) + '.') + '</span></div></div>' +
+        '<dl>' +
+          '<div><dt>Item</dt><dd>' + RF.money(l.price) + '</dd></div>' +
+          '<div><dt>' + (del ? 'Delivery' : 'Pickup') + '</dt><dd>' + (del ? RF.money(DELIVERY) : 'Free') + '</dd></div>' +
+          '<div style="border-top:1px solid var(--line);padding-top:12px;margin-top:2px"><dt style="font-weight:600;color:var(--ink)">Total</dt><dd class="price">' + RF.money(l.price + (del ? DELIVERY : 0)) + '</dd></div>' +
+        '</dl>' +
+        '<button type="button" class="btn btn-primary btn-block" id="place">Place order</button>' +
+        '<span class="small muted" style="text-align:center">Paying with ' + RF.esc(state.pay) + '</span>' +
+      '</aside></main>';
+  }
+
+  page.addEventListener('click', function (e) {
+    var h = e.target.closest('[data-handover]');
+    if (h && !h.disabled) { state.handover = h.getAttribute('data-handover'); render(); return; }
+    var p = e.target.closest('[data-pay]');
+    if (p) { state.pay = p.getAttribute('data-pay'); render(); return; }
+    if (e.target.closest('#place')) {
+      if (state.handover === 'delivery') {
+        var a = RF.$('#addr');
+        if (!a.value.trim()) { a.classList.add('invalid'); RF.$('#addrErr').hidden = false; a.focus(); return; }
+      }
+      var orders = RF.store.get('orders', []);
+      orders.unshift({ listing: l.id, handover: state.handover, pay: state.pay, total: l.price + (state.handover === 'delivery' ? DELIVERY : 0), at: Date.now() });
+      RF.store.set('orders', orders);
+      state.placed = true; render(); window.scrollTo(0, 0);
+    }
+  });
+  // Arrow keys move between radio cards.
+  page.addEventListener('keydown', function (e) {
+    var g = e.target.closest('[role="radiogroup"]');
+    if (!g || ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].indexOf(e.key) === -1) return;
+    var items = RF.$all('[role="radio"]:not(:disabled)', g), i = items.indexOf(e.target);
+    var n = items[(i + (e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length];
+    e.preventDefault(); n.click();
+    var again = RF.$('[data-' + (n.hasAttribute('data-pay') ? 'pay' : 'handover') + '="' + n.getAttribute(n.hasAttribute('data-pay') ? 'data-pay' : 'data-handover') + '"]');
+    if (again) again.focus();
+  });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listing — ReFurnish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+.product { display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start; padding-top: 24px; padding-bottom: 64px; }
+.gallery { flex: 999 1 520px; min-width: 0; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; }
+.thumbs { display: flex; flex-direction: column; gap: 12px; }
+.thumb { width: 88px; padding: 0; border: 2px solid transparent; border-radius: 12px; background: none; cursor: pointer; }
+.thumb .well { border-radius: 10px; }
+.thumb .well svg.glyph { width: 56%; }
+.thumb[aria-pressed="true"] { border-color: var(--oak-deep); }
+.main-photo { position: relative; }
+.main-photo .well { border-radius: 16px; }
+.main-photo .counter { position: absolute; left: 16px; bottom: 14px; font-size: 13px; color: var(--muted); background: var(--bg); padding: 2px 10px; border-radius: 999px; }
+.info { flex: 1 1 380px; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.mini { background: var(--raised); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; gap: 10px; align-items: flex-start; }
+.mini svg { flex: none; margin-top: 3px; color: var(--oak-deep); }
+.seller-card { display: flex; align-items: center; gap: 14px; padding: 16px; background: var(--raised); border: 1px solid var(--line); border-radius: 16px; color: var(--ink); text-decoration: none; }
+.seller-card:hover { color: var(--ink); box-shadow: var(--shadow); }
+.avatar { border-radius: 999px; background: var(--oak-deep); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
+.specs { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); column-gap: 16px; }
+.specs > div { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.specs dt { font-size: 14px; line-height: 20px; color: var(--muted); }
+.specs dd { margin: 2px 0 0; font-weight: 600; }
+@media (max-width: 600px) {
+  .gallery { grid-template-columns: 1fr; }
+  .thumbs { flex-direction: row; order: 2; overflow-x: auto; }
+  .thumb { width: 64px; flex: none; }
+}
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+
+<div id="page"></div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  RF.init('shop');
+  var id = RF.param('id') || 'linen-sofa';
+  var l = RF.getListing(id);
+  var page = RF.$('#page');
+
+  if (!l) {
+    page.innerHTML = '<main class="container empty" style="padding-top:96px;padding-bottom:96px">' +
+      '<h1 class="h-l">This listing isn’t here</h1><p class="muted" style="margin:0">It may have been removed by the seller.</p>' +
+      '<a class="btn btn-primary" href="shop.html">Browse furniture</a></main>';
+    return;
+  }
+
+  var s = RF.seller(l.seller) || { name: 'Seller', rating: 0, sold: 0, replies: '' };
+  var photoCount = l.photos && l.photos.length ? l.photos.length : 5;
+  var photo = 0;
+  document.title = l.name + ' — ReFurnish';
+
+  var cta;
+  if (l.mine) {
+    cta = '<a class="btn btn-primary btn-block" href="sell.html?edit=' + encodeURIComponent(l.id) + '">Edit listing</a>' +
+          '<a class="btn btn-secondary btn-block" href="my-listings.html">Manage my listings</a>';
+  } else if (l.sold) {
+    cta = '<button type="button" class="btn btn-primary btn-block" disabled>Sold</button>' +
+          '<a class="btn btn-secondary btn-block" href="shop.html?cat=' + l.cat + '">See similar ' + l.cat.toLowerCase() + '</a>';
+  } else {
+    cta = '<a class="btn btn-primary btn-block" href="checkout.html?id=' + encodeURIComponent(l.id) + '">Buy now</a>' +
+      '<div style="display:flex;gap:10px">' +
+        '<a class="btn btn-secondary" href="messages.html?listing=' + encodeURIComponent(l.id) + '" style="flex:1">Message seller</a>' +
+        '<button type="button" class="btn btn-secondary btn-icon heart-btn" data-save="' + RF.esc(l.id) + '" aria-pressed="' + RF.isSaved(l.id) + '" aria-label="Save item">' + RF.icon('heart') + '</button>' +
+      '</div>';
+  }
+
+  var tags = (s.verified ? '<span class="label tag tag-oak">Verified seller</span>' : '') +
+    '<span class="label tag" style="background:var(--sunken);color:var(--muted)">' + RF.esc(l.cond) + '</span>' +
+    (l.wasPrice && !l.sold ? '<span class="label tag tag-oak">Price dropped</span>' : '');
+
+  var specs = [['Dimensions', l.dims], ['Material', l.material], ['Age', l.age], ['Category', l.sub || l.cat]]
+    .filter(function (x) { return x[1]; })
+    .map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + RF.esc(x[1]) + '</dd></div>'; }).join('');
+
+  page.innerHTML =
+    '<div class="container" style="padding-top:28px"><nav aria-label="Breadcrumb" class="breadcrumb">' +
+      '<a href="index.html">Home</a><span aria-hidden="true">/</span><a href="shop.html?cat=' + l.cat + '">' + l.cat + '</a><span aria-hidden="true">/</span><span aria-current="page">' + RF.esc(l.name) + '</span></nav></div>' +
+    '<main class="container product">' +
+      '<section aria-label="Photos" class="gallery">' +
+        '<div class="thumbs" id="thumbs"></div>' +
+        '<div class="main-photo" id="mainPhoto"></div>' +
+      '</section>' +
+      '<section class="info">' +
+        '<div style="display:flex;flex-direction:column;gap:8px">' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">' + tags + '</div>' +
+          '<h1 class="h-l" style="margin-top:4px">' + RF.esc(l.name) + '</h1>' +
+          '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font-size:28px;line-height:36px;font-weight:700">' + RF.money(l.price) + '</span>' +
+            (l.wasPrice ? '<span class="muted" style="text-decoration:line-through">' + RF.money(l.wasPrice) + '</span>' : '') + '</div>' +
+          '<div class="small muted" style="display:flex;flex-wrap:wrap;gap:16px">' +
+            '<span style="display:inline-flex;gap:6px;align-items:center">' + RF.icon('pin', 18) + 'Pick up in ' + RF.esc(l.area) + '</span>' +
+            '<span style="display:inline-flex;gap:6px;align-items:center">' + RF.icon('clock', 18) + RF.agoLong(l.ageHours) + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:10px">' + cta + '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">' +
+          '<div class="mini">' + RF.icon('pin') + '<div><div class="small" style="font-weight:600">Pickup</div><div class="small muted">Free · ' + RF.esc(l.area) + '</div></div></div>' +
+          '<div class="mini">' + RF.icon('truck') + '<div><div class="small" style="font-weight:600">Delivery</div><div class="small muted">' + (l.delivery ? '৳ 800 within Dhaka' : 'Pickup only') + '</div></div></div>' +
+        '</div>' +
+        '<a class="seller-card" href="profile.html?seller=' + encodeURIComponent(l.seller) + '">' +
+          '<span class="avatar" aria-hidden="true" style="width:48px;height:48px;font-size:22px">' + RF.esc(s.name.charAt(0)) + '</span>' +
+          '<span style="flex:1;display:flex;flex-direction:column">' +
+            '<span style="font-weight:600;display:inline-flex;align-items:center;gap:6px">' + RF.esc(s.name) + (s.verified ? '<span style="color:var(--oak-deep);display:flex" role="img" aria-label="Phone verified">' + RF.icon('shield', 16).replace('aria-hidden="true"', '') + '</span>' : '') + '</span>' +
+            '<span class="small muted">★ ' + s.rating + ' · ' + s.sold + ' sales · ' + RF.esc(s.replies.replace('Usually replies within', 'Usually replies in')) + '</span>' +
+          '</span><span class="muted" style="display:flex">' + RF.icon('right') + '</span></a>' +
+        '<div style="display:flex;flex-direction:column;gap:10px"><h2 class="h-s">About this piece</h2><p style="margin:0;max-width:68ch">' + RF.esc(l.desc || 'No description yet.') + '</p></div>' +
+        (specs ? '<dl class="specs">' + specs + '</dl>' : '') +
+        '<div class="notice">' + RF.icon('lock') + '<span>Chat stays in ReFurnish. Phone numbers are only shared when you both agree.</span></div>' +
+        (l.mine ? '' : '<div><button type="button" id="report" style="display:inline-flex;gap:6px;align-items:center;height:44px;padding:0;border:0;background:transparent;font:500 14px var(--font);color:var(--muted);cursor:pointer">' + RF.icon('flag', 16) + 'Report listing</button><span id="reported" class="small muted" hidden>Thanks. Our team will review this listing within 24 hours.</span></div>') +
+      '</section>' +
+    '</main>' +
+    '<section style="border-top:1px solid var(--line)"><div class="container" style="padding-top:64px;padding-bottom:96px">' +
+      '<h2 class="h-m" style="margin-bottom:24px">More ' + l.cat.toLowerCase() + ' nearby</h2>' +
+      '<div class="product-grid tight" id="similar"></div></div></section>';
+
+  function renderPhotos() {
+    var t = '';
+    for (var i = 0; i < photoCount; i++) {
+      t += '<button type="button" class="thumb" data-photo="' + i + '" aria-label="Show photo ' + (i + 1) + '" aria-pressed="' + (i === photo) + '">' + RF.well(l, '', i) + '</button>';
+    }
+    RF.$('#thumbs').innerHTML = t;
+    RF.$('#mainPhoto').innerHTML = RF.well(l, '', photo) + '<span class="counter">' + (photo + 1) + ' / ' + photoCount + '</span>';
+  }
+  RF.$('#thumbs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-photo]'); if (!b) return;
+    photo = Number(b.getAttribute('data-photo')); renderPhotos();
+  });
+  renderPhotos();
+
+  var rep = RF.$('#report');
+  if (rep) rep.addEventListener('click', function () { rep.hidden = true; RF.$('#reported').hidden = false; });
+
+  var similar = RF.allListings().filter(function (x) { return x.cat === l.cat && x.id !== l.id && !x.sold; }).slice(0, 4);
+  if (similar.length < 4) similar = similar.concat(RF.allListings().filter(function (x) { return x.cat !== l.cat && !x.sold; }).slice(0, 4 - similar.length));
+  RF.$('#similar').innerHTML = similar.map(function (x) { return RF.productCard(x); }).join('');
+})();
+</script>
+</body>
+</html>
